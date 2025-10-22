@@ -5,71 +5,64 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.google.firebase.auth.FirebaseAuth
 import java.text.SimpleDateFormat
+import java.util.Locale
 
-class ChatAdapter(val chats : ArrayList<Message>) :
-    RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-    //    class ChatViewHolder(itemView : View) : RecyclerView.ViewHolder(itemView) {
-//        val message = itemView.findViewById<TextView>(R.id.msg)
-//        val time = itemView.findViewById<TextView>(R.id.time)
-//    }
-//
-//    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatViewHolder {
-//        return ChatViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.incoming_chat_row,parent,false))
-//    }
-//
-//    override fun onBindViewHolder(holder: ChatViewHolder, position: Int) {
-//        holder.message.text = chats[position].msgContent
-//        val formattedDate = SimpleDateFormat("hh:mm a").format(chats[position].timestamp)
-//        holder.time.text = formattedDate
-//    }
-//
-//    override fun getItemCount(): Int {
-//        return chats.size
-//    }
+class ChatAdapter(
+    val chats: ArrayList<Message>,
+    private val meUid: String = FirebaseRefs.requireUid()
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+
+    companion object {
+        private const val OUTGOING = 0
+        private const val INCOMING = 1
+    }
+
+    // Create a single formatter instance (cheaper than new each bind)
+    private val timeFmt = SimpleDateFormat("hh:mm a", Locale.getDefault())
+
+    override fun getItemViewType(position: Int): Int {
+        val msg = chats[position]
+        return if (msg.senderID == meUid) OUTGOING else INCOMING
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-        if (viewType == 0){
-            return outgoingChatViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.outgoing_chat_row,parent,false))
+        val inflater = LayoutInflater.from(parent.context)
+        return if (viewType == OUTGOING) {
+            OutgoingVH(inflater.inflate(R.layout.outgoing_chat_row, parent, false))
+        } else {
+            IncomingVH(inflater.inflate(R.layout.incoming_chat_row, parent, false))
         }
-        if (viewType == 1){
-            return incomingChatViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.incoming_chat_row,parent,false))
-        }
-        return outgoingChatViewHolder(LayoutInflater.from(parent.context).inflate(R.layout.outgoing_chat_row,parent,false))
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        if (holder is outgoingChatViewHolder){
-            holder.myMSG.text = chats[position].msgContent
-            val formattedDate = SimpleDateFormat("hh:mm a").format(chats[position].timestamp)
-            holder.myTIME.text = formattedDate
+        val msg = chats[position]
+        val time = formatTime(msg.timestamp)
+
+        when (holder) {
+            is OutgoingVH -> {
+                holder.myMSG.text = msg.msgContent
+                holder.myTIME.text = time
+            }
+            is IncomingVH -> {
+                holder.yourMSG.text = msg.msgContent
+                holder.yourTIME.text = time
+            }
         }
-        if (holder is incomingChatViewHolder){
-            holder.yourMSG.text = chats[position].msgContent
-            val formattedDate = SimpleDateFormat("hh:mm a").format(chats[position].timestamp)
-            holder.yourTIME.text = formattedDate
-
-        }
     }
 
-    override fun getItemCount(): Int {
-        return chats.size
+    override fun getItemCount(): Int = chats.size
+
+    private fun formatTime(ts: Long): String =
+        if (ts > 0L) timeFmt.format(ts) else "—"
+
+    class OutgoingVH(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val myMSG: TextView = itemView.findViewById(R.id.outgoingmsg)
+        val myTIME: TextView = itemView.findViewById(R.id.outgoingtime)
     }
 
-    override fun getItemViewType(position: Int): Int {
-        return if (chats[position].senderID == FirebaseAuth.getInstance().currentUser!!.uid){
-            0
-        } else
-            1
-    }
-
-    class outgoingChatViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView){
-        val myMSG = itemView.findViewById<TextView>(R.id.outgoingmsg)
-        val myTIME = itemView.findViewById<TextView>(R.id.outgoingtime)
-    }
-
-    class incomingChatViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView){
-        val yourMSG = itemView.findViewById<TextView>(R.id.incomingmsg)
-        val yourTIME = itemView.findViewById<TextView>(R.id.incomingtime)
+    class IncomingVH(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val yourMSG: TextView = itemView.findViewById(R.id.incomingmsg)
+        val yourTIME: TextView = itemView.findViewById(R.id.incomingtime)
     }
 }

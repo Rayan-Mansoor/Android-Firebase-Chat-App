@@ -17,12 +17,13 @@ object FirebaseRefs {
     val fs: FirebaseFirestore by lazy { Firebase.firestore }
 
     // Common paths (RTDB)
-    val channels get() = rtdb.reference.child("channels")
-    val presence get() = rtdb.reference.child("presence")
+    val messages get() = rtdb.reference.child("messages")
+    val memberships get() = rtdb.reference.child("memberships")
     val typing get() = rtdb.reference.child("typing")
 
     // Firestore collections
     val users get() = fs.collection("users")
+    val channels get() = fs.collection("channels")
 
     // Handy getters (don’t cache—auth state can change)
     val uid: String? get() = auth.currentUser?.uid
