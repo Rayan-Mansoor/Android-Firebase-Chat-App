@@ -14,7 +14,6 @@ import kotlin.collections.ArrayList
 
 class ChatActivity : AppCompatActivity() {
     private lateinit var binding: ActivityChatBinding
-    private lateinit var databaseRefUsers : DatabaseReference
     private lateinit var databaseRefCurrentChannel : DatabaseReference
     private lateinit var databaseRefCurrentChannelReverse : DatabaseReference
 
@@ -29,9 +28,8 @@ class ChatActivity : AppCompatActivity() {
         val recieverID = intent.getStringExtra("ID")
         val recieverName = intent.getStringExtra("Name")
 
-        databaseRefUsers = FirebaseDatabase.getInstance("https://chat-application-803f3-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference("Users")
-        databaseRefCurrentChannel = FirebaseDatabase.getInstance("https://chat-application-803f3-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference("Channels").child(FirebaseAuth.getInstance().currentUser!!.uid).child(recieverID!!)
-        databaseRefCurrentChannelReverse = FirebaseDatabase.getInstance("https://chat-application-803f3-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference("Channels").child(recieverID!!).child(FirebaseAuth.getInstance().currentUser!!.uid)
+        databaseRefCurrentChannel = FirebaseDatabase.getInstance().getReference("channels").child(FirebaseAuth.getInstance().currentUser!!.uid).child(recieverID!!)
+        databaseRefCurrentChannelReverse = FirebaseDatabase.getInstance().getReference("channels").child(recieverID!!).child(FirebaseAuth.getInstance().currentUser!!.uid)
 
         binding.floatingActionButton.setOnClickListener {
             val typedMSG = binding.editTextTextPersonName.text.toString()

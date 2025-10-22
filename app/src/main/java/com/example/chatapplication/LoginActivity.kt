@@ -9,7 +9,6 @@ import android.util.Patterns
 import android.view.View
 import android.widget.Toast
 import com.example.chatapplication.databinding.ActivityLoginBinding
-import com.google.firebase.auth.FirebaseAuth
 
 class LoginActivity : AppCompatActivity() {
     private lateinit var binding : ActivityLoginBinding
@@ -85,8 +84,7 @@ class LoginActivity : AppCompatActivity() {
     private fun loginAcc() {
         if (isInfoValid){
             setProgressBar(true)
-            val firebaseAuth = FirebaseAuth.getInstance()
-            firebaseAuth.signInWithEmailAndPassword(binding.myEmail.text.toString(),binding.myPassword.text.toString()).addOnCompleteListener(this) { task ->
+            FirebaseRefs.auth.signInWithEmailAndPassword(binding.myEmail.text.toString(),binding.myPassword.text.toString()).addOnCompleteListener(this) { task ->
                 if (task.isSuccessful){
                     setProgressBar(false)
                     Toast.makeText(this,"Login Successful", Toast.LENGTH_SHORT).show()

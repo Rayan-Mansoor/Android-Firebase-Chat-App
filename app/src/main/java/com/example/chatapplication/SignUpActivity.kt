@@ -10,21 +10,15 @@ import android.util.Patterns
 import android.view.View
 import android.widget.Toast
 import com.example.chatapplication.databinding.ActivitySignUpBinding
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.FirebaseDatabase
 
 class SignUpActivity : AppCompatActivity() {
     private lateinit var binding : ActivitySignUpBinding
     private var isInfoValid : Boolean = false
-    private lateinit var databaseRef : DatabaseReference
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivitySignUpBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        databaseRef = FirebaseDatabase.getInstance("https://chat-application-803f3-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference("Users")
 
         binding.regEmail.hint = "Email Address"
         binding.regPassword.hint = "Password"
@@ -148,28 +142,25 @@ class SignUpActivity : AppCompatActivity() {
     private fun createAcc(){
         if (isInfoValid){
             setProgressBar(true)
-            val firebaseAuth = FirebaseAuth.getInstance()
-            firebaseAuth.createUserWithEmailAndPassword(binding.regEmail.text.toString(),binding.regPassword.text.toString())
+            FirebaseRefs.auth.createUserWithEmailAndPassword(binding.regEmail.text.toString(),binding.regPassword.text.toString())
                 .addOnCompleteListener(this) { task ->
                     if (task.isSuccessful){
                         Toast.makeText(applicationContext,"Account Created Successfully", Toast.LENGTH_SHORT).show()
                         setProgressBar(false)
-                        firebaseAuth.currentUser!!.sendEmailVerification()
 
-                        val createdUser = User(FirebaseAuth.getInstance().uid!!, binding.regEmail.text.toString(), binding.regPassword.text.toString())
-                        databaseRef.child(FirebaseAuth.getInstance().uid!!).setValue(createdUser)
-                        firebaseAuth.signOut()
-                        startActivity(Intent(this,LoginActivity::class.java))
-                        finish()
+                        val createdUser = User(FirebaseRefs.uid!!, binding.regEmail.text.toString())
+                        FirebaseRefs.users.document(createdUser.userID).set(createdUser).addOnCompleteListener {
+                            FirebaseRefs.auth.signOut()
+                            startActivity(Intent(this, LoginActivity::class.java))
+                            finish()
+                        }
                     }
                     else{
                         Toast.makeText(this,"Account Creation Failed. Try Again", Toast.LENGTH_SHORT).show()
                         setProgressBar(false)
 
                     }
-
                 }
-
         }
         else{
             Toast.makeText(applicationContext,"Invalid Data Entered", Toast.LENGTH_SHORT).show()

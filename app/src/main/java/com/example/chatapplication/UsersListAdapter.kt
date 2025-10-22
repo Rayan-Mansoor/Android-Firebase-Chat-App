@@ -32,5 +32,4 @@ class UsersListAdapter(val usersList : ArrayList<User>) : RecyclerView.Adapter<U
     override fun getItemCount(): Int {
         return usersList.size
     }
-
 }

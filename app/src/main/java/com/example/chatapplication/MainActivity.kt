@@ -22,9 +22,7 @@ import kotlin.collections.ArrayList
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private lateinit var databaseRefUsers : DatabaseReference
     private lateinit var databaseRefChannels : DatabaseReference
-
 
     private lateinit var usersListAdapter : UsersListAdapter
     private lateinit var addedUsers : ArrayList<User>
@@ -44,8 +42,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (item.itemId == R.id.addPerson){
-            databaseRefUsers = FirebaseDatabase.getInstance("https://chat-application-803f3-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference("Users")
-
             var emailToSearch = ""
             val emailET = EditText(this)
             emailET.inputType = InputType.TYPE_CLASS_TEXT
@@ -54,29 +50,36 @@ class MainActivity : AppCompatActivity() {
             builder.setPositiveButton("ADD") { _, _ ->
                 emailToSearch = emailET.text.toString()
                 Log.d("Main",emailToSearch)
-                databaseRefUsers.get().addOnCompleteListener { task ->
-                    if (task.isSuccessful){
-                        Log.d("Main","task succeeded")
-                        task.result.children.forEach {
-                            if (emailToSearch == it.child("userEmail").value){
-                                Toast.makeText(this,"User found and has been add to your chat list",Toast.LENGTH_SHORT).show()
-                                databaseRefChannels.child(FirebaseAuth.getInstance().currentUser!!.uid).child(it.child("userID").value.toString()).setValue("hello")
-                                databaseRefChannels.child(it.child("userID").value.toString()).child(FirebaseAuth.getInstance().currentUser!!.uid).setValue("hello")
-                                val newUser = User(it.child("userID").value.toString(),it.child("userEmail").value.toString(),it.child("userPassword").value.toString())
-                                addedUsers.add(newUser)
-                                usersListAdapter.notifyDataSetChanged()
-                            }
+                FirebaseRefs.users.whereEqualTo("userEmail", emailToSearch)
+                    .get()
+                    .addOnSuccessListener { querySnapshot ->
+                        if (!querySnapshot.isEmpty) {
+                            Log.d("Main", "task succeeded")
 
-                            else
-                                Toast.makeText(this,"No user found with the specified email",Toast.LENGTH_SHORT).show()
+                            // Get the first matching user
+                            val userDoc = querySnapshot.documents[0]
+                            val userId = userDoc.getString("userID") ?: ""
+                            val userEmail = userDoc.getString("userEmail") ?: ""
+
+                            Toast.makeText(this, "User found and has been added to your chat list", Toast.LENGTH_SHORT).show()
+
+                            // Update channels collection
+                            databaseRefChannels.child(FirebaseRefs.uid!!).child(userId).setValue("hello")
+                            databaseRefChannels.child(userId).child(FirebaseRefs.uid!!).setValue("hello")
+
+                            // Add user to list
+                            val newUser = User(userId, userEmail)
+                            addedUsers.add(newUser)
+                            usersListAdapter.notifyDataSetChanged()
+
+                        } else {
+                            Toast.makeText(this, "No user found with the specified email", Toast.LENGTH_SHORT).show()
                         }
                     }
-                    if(!task.isSuccessful){
-                        Log.d("Main","task didn't succeed")
+                    .addOnFailureListener { exception ->
+                        Log.d("Main", "task didn't succeed: ${exception.message}")
+                        Toast.makeText(this, "Error searching for user", Toast.LENGTH_SHORT).show()
                     }
-
-
-                }
             }.show()
 
         }
@@ -97,9 +100,7 @@ class MainActivity : AppCompatActivity() {
             binding = ActivityMainBinding.inflate(layoutInflater)
             setContentView(binding.root)
 
-            databaseRefUsers = FirebaseDatabase.getInstance("https://chat-application-803f3-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference("Users")
-
-            databaseRefChannels = FirebaseDatabase.getInstance("https://chat-application-803f3-default-rtdb.asia-southeast1.firebasedatabase.app/").getReference("Channels")
+            databaseRefChannels = FirebaseDatabase.getInstance().getReference("channels")
 
             addedUsers  = ArrayList()
 
@@ -107,27 +108,26 @@ class MainActivity : AppCompatActivity() {
             childRef.addValueEventListener(object : ValueEventListener{
                 override fun onDataChange(snapshot: DataSnapshot) {
                     for (snap in snapshot.children){
-                        databaseRefUsers.get().addOnCompleteListener { task ->
-                            if (task.isSuccessful){
-                                task.result.children.forEach {
-                                    if (snap.key == it.child("userID").value){
-                                        val retrievedUser = User(it.child("userID").value.toString(),it.child("userEmail").value.toString(),it.child("userPassword").value.toString())
-                                        if (!addedUsers.contains(retrievedUser)){
-                                            addedUsers.add(retrievedUser)
-                                            usersListAdapter.notifyDataSetChanged()
-                                        }
+                        FirebaseRefs.users.document(snap.key!!)
+                            .get()
+                            .addOnSuccessListener { documentSnapshot ->
+                                if (documentSnapshot.exists()) {
+                                    val userId = documentSnapshot.getString("userID") ?: ""
+                                    val userEmail = documentSnapshot.getString("userEmail") ?: ""
 
+                                    val retrievedUser = User(userId, userEmail)
+
+                                    if (!addedUsers.contains(retrievedUser)) {
+                                        addedUsers.add(retrievedUser)
+                                        usersListAdapter.notifyDataSetChanged()
                                     }
-
-
+                                } else {
+                                    Log.d("Main", "User document not found")
                                 }
                             }
-                            if(!task.isSuccessful){
-                                Log.d("Main","task didn't succeed")
+                            .addOnFailureListener { exception ->
+                                Log.d("Main", "task didn't succeed: ${exception.message}")
                             }
-
-
-                        }
                     }
                 }
 
@@ -136,16 +136,9 @@ class MainActivity : AppCompatActivity() {
                 }
             })
 
-
             usersListAdapter = UsersListAdapter(addedUsers)
             binding.usersRcv.adapter = usersListAdapter
             binding.usersRcv.layoutManager = LinearLayoutManager(this)
         }
-
-
-
-
-
-
     }
 }
