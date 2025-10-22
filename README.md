@@ -13,8 +13,6 @@ A clean, beginner‑friendly **1‑to‑1 chat app for Android** written in **Ko
 
 ## Demo Screenshots
 
-> The repository includes images inside the `screenshots/` folder. If your filenames differ, edit the links below accordingly.
-
 | Home                                                             | Sign Up                                                                | Chat                                                             |
 | ---------------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | <img src="screenshots/home.jpg" width="260" alt="Home screen" /> | <img src="screenshots/sign up.jpg" width="260" alt="Sign Up screen" /> | <img src="screenshots/chat.jpg" width="260" alt="Chat screen" /> |
