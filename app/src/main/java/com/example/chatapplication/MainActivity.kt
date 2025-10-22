@@ -7,11 +7,14 @@ import android.text.InputType
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.chatapplication.databinding.ActivityMainBinding
+import com.example.chatapplication.databinding.DialogAddUserBinding
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ListenerRegistration
@@ -44,7 +47,9 @@ class MainActivity : AppCompatActivity() {
             layoutManager = LinearLayoutManager(this@MainActivity)
         }
 
-        // 🔴 Remove old RTDB "channels/<uid>" listener completely
+        binding.fabAdd.setOnClickListener {
+            showAddPersonDialog()
+        }
 
         // ✅ Listen to Firestore channels where I'm a member
         fsListener = FirebaseRefs.channels
@@ -92,66 +97,115 @@ class MainActivity : AppCompatActivity() {
                 finish()
                 true
             }
-            R.id.addPerson -> {
-                showAddPersonDialog()
-                true
-            }
             else -> super.onOptionsItemSelected(item)
         }
     }
 
     private fun showAddPersonDialog() {
         val me = FirebaseRefs.requireUid()
-        val emailET = EditText(this).apply {
-            inputType = InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
-            hint = "Enter the user's email"
-        }
-        AlertDialog.Builder(this)
-            .setView(emailET)
-            .setPositiveButton("ADD") { _, _ ->
-                val email = emailET.text.toString().trim()
-                if (email.isEmpty()) return@setPositiveButton
 
-                FirebaseRefs.users.whereEqualTo("userEmail", email).limit(1).get()
-                    .addOnSuccessListener { q ->
-                        if (q.isEmpty) {
-                            Toast.makeText(this, "No user found with that email", Toast.LENGTH_SHORT).show()
-                            return@addOnSuccessListener
-                        }
-                        val otherUid = q.documents[0].getString("userID") ?: return@addOnSuccessListener
-                        val channelId = getChannelId(me, otherUid)
+        // Inflate custom dialog layout using ViewBinding
+        val dialogBinding = DialogAddUserBinding.inflate(layoutInflater)
 
-                        // Create/merge Firestore channel document
-                        val chDoc = FirebaseRefs.channels.document(channelId)
-                        chDoc.get().addOnSuccessListener { snap ->
-                            val base = mutableMapOf<String, Any>(
-                                "members" to listOf(me, otherUid),
-                                "kind" to "dm",
-                                "updatedAt" to FieldValue.serverTimestamp()
-                            )
-                            if (!snap.exists()) {
-                                base["createdAt"] = FieldValue.serverTimestamp()
-                            }
-                            chDoc.set(base, SetOptions.merge())
-                                .addOnSuccessListener {
-                                    // Ensure my membership in RTDB (receiver will get theirs on first open)
-                                    FirebaseRefs.memberships.child(channelId).child(me).setValue(true)
+        // Create Material dialog
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setView(dialogBinding.root)
+            .setCancelable(true)
+            .create()
 
-                                    // Navigate straight into the chat
-                                    val i = Intent(this, ChatActivity::class.java).apply {
-                                        putExtra("ID", otherUid)
-                                        putExtra("Name", email)
-                                        putExtra("channelId", channelId)
-                                    }
-                                    startActivity(i)
-                                }
-                        }
-                    }
-                    .addOnFailureListener {
-                        Toast.makeText(this, "Error searching for user", Toast.LENGTH_SHORT).show()
-                    }
+        // Add button click
+        dialogBinding.addButton.setOnClickListener {
+            val email = dialogBinding.emailEditText.text.toString().trim()
+
+            // Validate email
+            if (email.isEmpty()) {
+                dialogBinding.emailInputLayout.error = "Email is required"
+                return@setOnClickListener
             }
-            .setNegativeButton("CANCEL", null)
-            .show()
+
+            if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                dialogBinding.emailInputLayout.error = "Invalid email format"
+                return@setOnClickListener
+            }
+
+            // Clear any previous errors
+            dialogBinding.emailInputLayout.error = null
+
+            // Show progress, disable buttons
+            dialogBinding.progressBar.visibility = View.VISIBLE
+            dialogBinding.addButton.isEnabled = false
+            dialogBinding.cancelButton.isEnabled = false
+            dialogBinding.emailEditText.isEnabled = false
+
+            FirebaseRefs.users.whereEqualTo("userEmail", email).limit(1).get()
+                .addOnSuccessListener { q ->
+                    if (q.isEmpty) {
+                        // Hide progress, re-enable UI
+                        dialogBinding.progressBar.visibility = View.GONE
+                        dialogBinding.addButton.isEnabled = true
+                        dialogBinding.cancelButton.isEnabled = true
+                        dialogBinding.emailEditText.isEnabled = true
+
+                        dialogBinding.emailInputLayout.error = "No user found with that email"
+                        return@addOnSuccessListener
+                    }
+
+                    val otherUid = q.documents[0].getString("userID") ?: return@addOnSuccessListener
+                    val channelId = getChannelId(me, otherUid)
+
+                    // Create/merge Firestore channel document
+                    val chDoc = FirebaseRefs.channels.document(channelId)
+                    chDoc.get().addOnSuccessListener { snap ->
+                        val base = mutableMapOf<String, Any>(
+                            "members" to listOf(me, otherUid),
+                            "kind" to "dm",
+                            "updatedAt" to FieldValue.serverTimestamp()
+                        )
+                        if (!snap.exists()) {
+                            base["createdAt"] = FieldValue.serverTimestamp()
+                        }
+                        chDoc.set(base, SetOptions.merge())
+                            .addOnSuccessListener {
+                                // Ensure my membership in RTDB
+                                FirebaseRefs.memberships.child(channelId).child(me).setValue(true)
+
+                                // Dismiss dialog
+                                dialog.dismiss()
+
+                                // Navigate to chat
+                                val i = Intent(this, ChatActivity::class.java).apply {
+                                    putExtra("ID", otherUid)
+                                    putExtra("Name", email)
+                                    putExtra("channelId", channelId)
+                                }
+                                startActivity(i)
+                            }
+                            .addOnFailureListener {
+                                dialogBinding.progressBar.visibility = View.GONE
+                                dialogBinding.addButton.isEnabled = true
+                                dialogBinding.cancelButton.isEnabled = true
+                                dialogBinding.emailEditText.isEnabled = true
+
+                                Toast.makeText(this, "Error creating chat", Toast.LENGTH_SHORT).show()
+                            }
+                    }
+                }
+                .addOnFailureListener {
+                    // Hide progress, re-enable UI
+                    dialogBinding.progressBar.visibility = View.GONE
+                    dialogBinding.addButton.isEnabled = true
+                    dialogBinding.cancelButton.isEnabled = true
+                    dialogBinding.emailEditText.isEnabled = true
+
+                    Toast.makeText(this, "Error searching for user", Toast.LENGTH_SHORT).show()
+                }
+        }
+
+        // Cancel button click
+        dialogBinding.cancelButton.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.show()
     }
 }

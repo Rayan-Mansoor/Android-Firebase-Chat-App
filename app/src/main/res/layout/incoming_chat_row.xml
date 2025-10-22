@@ -1,36 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="wrap_content"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginTop="10dp"
-    android:background="@drawable/incoming_bubble"
-    android:padding="4dp">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:paddingStart="12dp"
+    android:paddingEnd="64dp"
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp"
+    android:gravity="start">
 
-    <TextView
-        android:id="@+id/incomingmsg"
-        android:layout_width="329dp"
-        android:layout_height="wrap_content"
-        android:text="ddfkvdfkvmkdfvdkvdfmlkvdkvkdfmvkldmvmdfkvdmvdfkvmdfkl"
-        android:textSize="20sp"
-        app:layout_constraintBottom_toTopOf="@+id/incomingtime"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="@+id/guideline18"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <TextView
-        android:id="@+id/incomingtime"
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="timestamp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        android:layout_marginEnd="8dp"
+        app:cardBackgroundColor="@color/bubble_incoming"
+        app:cardCornerRadius="18dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="0dp">
 
-    <androidx.constraintlayout.widget.Guideline
-        android:id="@+id/guideline18"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        app:layout_constraintGuide_percent="0.1" />
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="10dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/incomingmsg"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxWidth="@dimen/chat_bubble_max_width"
+                android:text="Incoming message"
+                android:textAppearance="@style/TextAppearance.Material3.BodyLarge"
+                android:textColor="@color/bubble_incoming_on" />
+
+            <TextView
+                android:id="@+id/incomingtime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="10:24 AM"
+                android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                android:textColor="@color/bubble_incoming_on_dim" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+</LinearLayout>

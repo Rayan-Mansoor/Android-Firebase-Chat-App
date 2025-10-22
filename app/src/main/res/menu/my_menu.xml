@@ -5,6 +5,4 @@
         android:id="@+id/logout"
         android:title="Logout" />
 
-    <item android:id="@+id/addPerson"
-        android:title="Add Person"/>
 </menu>
